@@ -3,7 +3,10 @@ import numpy as np
 from bs4 import BeautifulSoup
 from nltk.corpus import stopwords
 import re
-
+from sklearn.cross_validation import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer,TfidfVectorizer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_auc_score
 
 stop = set(stopwords.words('english'))
 vectorizer = None
@@ -28,9 +31,9 @@ def readFile(filename):
     clean_train = []
     for i in xrange(0,train_size):
         clean_train.append(filter(train_data['review'][i]))
-        if i%1000 ==0:
-            print '%d reviews processed...' %i
-    from sklearn.feature_extraction.text import CountVectorizer,TfidfVectorizer
+        #if i%1000 ==0:
+        #    print '%d reviews processed...' %i
+   
     
     #vectorizer = CountVectorizer(analyzer = "word", tokenizer = None, preprocessor = None, stop_words = None, max_features = 5000)
     if vectorizer==None:
@@ -50,26 +53,37 @@ def readFile(filename):
 
 def train(train_file):
     _,x,y = readFile(train_file)
-    from sklearn.ensemble import RandomForestClassifier
-    forest = RandomForestClassifier(n_estimators = 100, max_features = 'auto', random_state = 50)
-    forest = forest.fit(x,y)
-    return forest
+    tmp_array = np.arange(x.shape[0])
+    res_forest = None
+    res_score = 0
+    for i in range(10):
+        print 'loop %d ...' %(i+1)
+        train_i, test_i = train_test_split(tmp_array, train_size = 0.8, random_state = i)
+        train_x = x[train_i]
+        train_y = y[train_i]
+        test_x = x[test_i]
+        test_y = y[test_i]
+    
+        forest = RandomForestClassifier(n_estimators = 200, max_features = 0.2, random_state = 50)
+        forest = forest.fit(train_x,train_y)
+        res = forest.predict(test_x)
+        score = roc_auc_score(test_y, res)
+        if(score>res_score):
+            res_forest = forest
+            res_score = score
+            print 'Num %d forest used...'%(i+1)
+        del forest,train_i,test_i,train_x,train_y,test_x,test_y
+    return res_forest
 
 def predict(test_file,forest):
-    id,x = readFile(test_file)
+    mid,x = readFile(test_file)
     y = forest.predict(x)
     
-    output = pd.DataFrame( data={"id":id, "sentiment":y} )
-    output.to_csv( "/home/kehl/Desktop/random_forest.csv", index=False, quoting=3 )
+    output = pd.DataFrame( data={"id":mid, "sentiment":y} )
+    output.to_csv( "/home/kehl/Desktop/cross.csv", index=False, quoting=3 )
     
 if __name__=='__main__':
     model = train('/home/kehl/Desktop/labeledTrainData.tsv')
     predict('/home/kehl/Desktop/testData.tsv',model)
-    
-    
-    
-    
-    
-    
-    
+    print 'done...'
     
