@@ -34,7 +34,7 @@ def readFile(filename):
     
     #vectorizer = CountVectorizer(analyzer = "word", tokenizer = None, preprocessor = None, stop_words = None, max_features = 5000)
     if vectorizer==None:
-        vectorizer = TfidfVectorizer(sublinear_tf=True,max_df=0.5, max_features=50000)
+        vectorizer = TfidfVectorizer(sublinear_tf=True,max_df=0.5)
         train_data_feature = vectorizer.fit_transform(clean_train)
     else:
         vec = TfidfVectorizer(vocabulary=vectorizer.vocabulary_)
@@ -62,31 +62,22 @@ def forest_predict(test_file,forest):
     output = pd.DataFrame( data={"id":id, "sentiment":y} )
     output.to_csv( "/Users/oliverkehl/Desktop/Bag_of_Words_model_tfidf.csv", index=False, quoting=3 )
     
-def svm_train(train_file):
+def nn_train(train_file):
     _,x,y = readFile(train_file)
-    
-    C_range = np.logspace(-2, 10, 13)
-    gamma_range = np.logspace(-9, 3, 13)
-    param_grid = dict(gamma=gamma_range, C=C_range)
-    from sklearn.cross_validation import StratifiedShuffleSplit
-    from sklearn.grid_search import GridSearchCV
-    from sklearn.svm import SVC
-    cv = StratifiedShuffleSplit(y, n_iter=5, test_size=0.2, random_state=42)
-    grid = GridSearchCV(SVC(), param_grid=param_grid, cv=cv,n_jobs = 3)
-    grid.fit(x, y)
-    print grid.best_params_
-    print grid.best_score_
-    return grid.best_estimator_
+    import sklearn.neural_network as nn
+    model = nn.BernoulliRBM(n_components = 200, learning_rate = 0.1,batch_size = 2000, n_iter = 50, random_state = 1 , verbose=1)
+    model = model.fit(x,y)
+    return model
 
-def svm_predict(test_file,forest):
+def nn_predict(test_file,forest):
     id,x = readFile(test_file)
     y = forest.predict(x)
     output = pd.DataFrame( data={"id":id, "sentiment":y} )
-    output.to_csv( "/Users/oliverkehl/Desktop/svm_gridsearch_result.csv", index=False, quoting=3 )
+    output.to_csv( "/Users/oliverkehl/Desktop/svm_result.csv", index=False, quoting=3 )
     
 if __name__=='__main__':
-    model = svm_train('/Users/oliverkehl/Downloads/labeledTrainData.tsv')
-    svm_predict('/Users/oliverkehl/Downloads/testData.tsv',model)
+    model = nn_train('/Users/oliverkehl/Downloads/labeledTrainData.tsv')
+    nn_predict('/Users/oliverkehl/Downloads/testData.tsv',model)
     
     
     
