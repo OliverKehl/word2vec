@@ -51,7 +51,7 @@ def readFile(filename):
 def forest_train(train_file):
     _,x,y = readFile(train_file)
     from sklearn.ensemble import RandomForestClassifier
-    forest = RandomForestClassifier(100)
+    forest = RandomForestClassifier(n_estimators = 100, max_features = 'auto', random_state = 50)
     forest = forest.fit(x,y)
     return forest
 
@@ -60,7 +60,7 @@ def forest_predict(test_file,forest):
     y = forest.predict(x)
     
     output = pd.DataFrame( data={"id":id, "sentiment":y} )
-    output.to_csv( "/Users/oliverkehl/Desktop/Bag_of_Words_model_tfidf.csv", index=False, quoting=3 )
+    output.to_csv( "/home/kehl/Desktop/random_forest.csv", index=False, quoting=3 )
     
 def svm_train(train_file):
     _,x,y = readFile(train_file)
@@ -87,11 +87,3 @@ def svm_predict(test_file,forest):
 if __name__=='__main__':
     model = svm_train('/Users/oliverkehl/Downloads/labeledTrainData.tsv')
     svm_predict('/Users/oliverkehl/Downloads/testData.tsv',model)
-    
-    
-    
-    
-    
-    
-    
-    
