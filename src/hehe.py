@@ -3,6 +3,7 @@ import numpy as np
 from bs4 import BeautifulSoup
 from nltk.corpus import stopwords
 import re
+from sklearn.linear_model import LogisticRegression as LR
 
 
 stop = set(stopwords.words('english'))
@@ -12,7 +13,7 @@ def filter(review):
     res = BeautifulSoup(review)
     res = re.sub('[^a-zA-Z]',' ',res.get_text())
     words = res.lower().split()
-    words =[w for w in words if w not in stop]
+    #words =[w for w in words if w not in stop]
     return ' '.join(words)
     
 
@@ -28,13 +29,13 @@ def readFile(filename):
     clean_train = []
     for i in xrange(0,train_size):
         clean_train.append(filter(train_data['review'][i]))
-        if i%1000 ==0:
-            print '%d reviews processed...' %i
+        #if i%1000 ==0:
+            #print '%d reviews processed...' %i
     from sklearn.feature_extraction.text import CountVectorizer,TfidfVectorizer
     
     #vectorizer = CountVectorizer(analyzer = "word", tokenizer = None, preprocessor = None, stop_words = None, max_features = 5000)
     if vectorizer==None:
-        vectorizer = TfidfVectorizer(sublinear_tf=True,max_df=0.5, max_features=50000)
+        vectorizer = TfidfVectorizer(sublinear_tf=True,max_df=0.5,ngram_range = ( 1, 3 ), max_features=40000)
         train_data_feature = vectorizer.fit_transform(clean_train)
     else:
         vec = TfidfVectorizer(vocabulary=vectorizer.vocabulary_)
@@ -51,7 +52,7 @@ def readFile(filename):
 def forest_train(train_file):
     _,x,y = readFile(train_file)
     from sklearn.ensemble import RandomForestClassifier
-    forest = RandomForestClassifier(n_estimators = 100, max_features = 'auto', random_state = 50)
+    forest = RandomForestClassifier(n_estimators = 100, max_features = 'auto',  random_state = 50)
     forest = forest.fit(x,y)
     return forest
 
@@ -65,6 +66,31 @@ def forest_predict(test_file,forest):
 def svm_train(train_file):
     _,x,y = readFile(train_file)
     
+    from sklearn.cross_validation import train_test_split
+    tmp_array = np.arange(x.shape[0])
+    train_i, test_i = train_test_split(tmp_array, train_size = 0.8, random_state = 44)
+    
+    train_x = x[train_i]
+    test_x = x[test_i]
+    train_y = y[train_i]
+    test_y = y[test_i]
+    #from sklearn.svm import SVC
+    #classifier = SVC(C=1.0,gamma = 0.0)
+    #classifier.fit(train_x,train_y)
+    
+    lr = LR()
+    lr.fit(train_x,train_y)
+    #res = lr.predict_proba(test_x)
+    res = lr.predict_proba(test_x)
+    print res.shape
+    from sklearn.metrics import roc_auc_score
+    score = roc_auc_score(test_y,res[:,1])
+    print score
+    return lr
+    
+    '''
+    grid search
+    
     C_range = np.logspace(-2, 10, 13)
     gamma_range = np.logspace(-9, 3, 13)
     param_grid = dict(gamma=gamma_range, C=C_range)
@@ -77,13 +103,14 @@ def svm_train(train_file):
     print grid.best_params_
     print grid.best_score_
     return grid.best_estimator_
+    '''
 
-def svm_predict(test_file,forest):
+def svm_predict(test_file,model):
     id,x = readFile(test_file)
-    y = forest.predict(x)
-    output = pd.DataFrame( data={"id":id, "sentiment":y} )
-    output.to_csv( "/Users/oliverkehl/Desktop/svm_gridsearch_result.csv", index=False, quoting=3 )
+    y = model.predict_proba(x)
+    output = pd.DataFrame( data={"id":id, "sentiment":y[:,1]} )
+    output.to_csv( "/home/kehl/Desktop/LR_result.csv", index=False, quoting=3 )
     
 if __name__=='__main__':
-    model = svm_train('/Users/oliverkehl/Downloads/labeledTrainData.tsv')
-    svm_predict('/Users/oliverkehl/Downloads/testData.tsv',model)
+    model = svm_train('/home/kehl/Desktop/labeledTrainData.tsv')
+    svm_predict('/home/kehl/Desktop/testData.tsv',model)
