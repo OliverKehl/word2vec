@@ -35,7 +35,7 @@ def readFile(filename):
     
     #vectorizer = CountVectorizer(analyzer = "word", tokenizer = None, preprocessor = None, stop_words = None, max_features = 5000)
     if vectorizer==None:
-        vectorizer = TfidfVectorizer(sublinear_tf=True,max_df=0.5,ngram_range = ( 1, 3 ), max_features=40000)
+        vectorizer = TfidfVectorizer(sublinear_tf=True,ngram_range = ( 1, 3 ), max_features=40000)
         train_data_feature = vectorizer.fit_transform(clean_train)
     else:
         vec = TfidfVectorizer(vocabulary=vectorizer.vocabulary_)
@@ -109,8 +109,8 @@ def svm_predict(test_file,model):
     id,x = readFile(test_file)
     y = model.predict_proba(x)
     output = pd.DataFrame( data={"id":id, "sentiment":y[:,1]} )
-    output.to_csv( "/home/kehl/Desktop/LR_result.csv", index=False, quoting=3 )
+    output.to_csv( "/home/chuangxin/LR_result.csv", index=False, quoting=3 )
     
 if __name__=='__main__':
-    model = svm_train('/home/kehl/Desktop/labeledTrainData.tsv')
-    svm_predict('/home/kehl/Desktop/testData.tsv',model)
+    model = svm_train('/home/chuangxin/labeledTrainData.tsv')
+    svm_predict('/home/chuangxin/testData.tsv',model)
